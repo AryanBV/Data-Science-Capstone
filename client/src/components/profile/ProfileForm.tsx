@@ -1,4 +1,4 @@
-// src/components/profile/ProfileForm.tsx
+// client/src/components/profile/ProfileForm.tsx
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -10,7 +10,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,36 +19,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
+import { Gender } from "@/interfaces/profile";
 
-const profileFormSchema = z.object({
-  full_name: z.string().min(2, "Full name must be at least 2 characters"),
-  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
-  gender: z.enum(["male", "female", "other"]),
-  is_parent: z.boolean().default(false)
+// Simplified schema for basic profile information
+const profileSchema = z.object({
+  full_name: z.string().min(1, "Full name is required"),
+  date_of_birth: z.string().min(1, "Date of birth is required"),
+  gender: z.enum(["male", "female", "other"] as const),
 });
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface ProfileFormProps {
-  initialData?: Partial<ProfileFormValues>;
-  onSubmit: (data: ProfileFormValues) => Promise<void>;
+  initialData?: Partial<ProfileFormData>;
+  onSubmit: (data: ProfileFormData) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export function ProfileForm({ initialData, onSubmit }: ProfileFormProps) {
+export function ProfileForm({ initialData, onSubmit, isLoading = false }: ProfileFormProps) {
   const { toast } = useToast();
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
     defaultValues: initialData || {
       full_name: "",
       date_of_birth: "",
       gender: "male",
-      is_parent: false
     },
   });
 
-  const handleSubmit = async (data: ProfileFormValues) => {
+  const handleSubmit = async (data: ProfileFormData) => {
     try {
       await onSubmit(data);
       toast({
@@ -57,6 +56,7 @@ export function ProfileForm({ initialData, onSubmit }: ProfileFormProps) {
         description: "Profile has been saved successfully.",
       });
     } catch (error) {
+      console.error('Profile update error:', error);
       toast({
         title: "Error",
         description: "Failed to save profile. Please try again.",
@@ -68,98 +68,67 @@ export function ProfileForm({ initialData, onSubmit }: ProfileFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="space-y-4">
-          {/* Full Name Field */}
-          <FormField
-            control={form.control}
-            name="full_name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-base font-medium text-gray-900">Full Name</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    className="h-10"
-                    placeholder="Enter your full name"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="full_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Full Name</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Enter full name" disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          {/* Date of Birth Field */}
-          <FormField
-            control={form.control}
-            name="date_of_birth"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-base font-medium text-gray-900">Date of Birth</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="date" 
-                    {...field}
-                    className="h-10"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="date_of_birth"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date of Birth</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          {/* Gender Field */}
-          <FormField
-            control={form.control}
-            name="gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-base font-medium text-gray-900">Gender</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select your gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Is Parent Checkbox */}
-          <FormField
-            control={form.control}
-            name="is_parent"
-            render={({ field }) => (
-              <FormItem className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
+        <FormField
+          control={form.control}
+          name="gender"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gender</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value} 
+                disabled={isLoading}
+              >
                 <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="mt-1"
-                  />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
                 </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel className="text-base font-medium text-gray-900">Parent Account</FormLabel>
-                  <FormDescription>
-                    Enable this if you are creating a parent account to manage family members
-                  </FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
-        </div>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button 
           type="submit" 
-          className="w-full bg-primary hover:bg-primary/90 text-white h-11"
+          className="w-full"
+          disabled={isLoading}
         >
-          Save Profile
+          {isLoading ? "Saving..." : "Save Profile"}
         </Button>
       </form>
     </Form>
